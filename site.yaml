@@ -1,0 +1,38 @@
+ - hosts: all
+   tasks:
+     - name: Partition install drive
+       block:
+         - name: Create boot partition
+           parted:
+             device: "{{ install_drive }}"
+             label: gpt
+             number: 1
+             part_end: 512MB
+             name: boot
+             flags: [boot, esp]
+             state: present
+         - name: Create root partition
+           parted:
+             device: "{{ install_drive }}"
+             label: gpt
+             number: 2
+             part_start: 512MB
+             part_end: 9GB
+             name: root
+             flags: [lvm]
+             state: present
+     - name: Setup LVM
+       block:
+         - name: Configure volume group
+           lvg:
+             vg: vgroup1
+             pvs:
+               - "{{ install_drive }}2"
+         - name: Configure logical volumes
+           lvol:
+             vg: vgroup1
+             lv: "{{ item.lv }}"
+             size: "{{ item.size }}"
+           loop:
+             - { lv: tmp, size: 512m }
+             - { lv: root, size: "100%FREE" }
