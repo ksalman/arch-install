@@ -17,7 +17,7 @@
              label: gpt
              number: 2
              part_start: 512MB
-             part_end: 9GB
+             part_end: 3GB
              name: root
              flags: [lvm]
              state: present
@@ -33,6 +33,105 @@
              vg: vgroup1
              lv: "{{ item.lv }}"
              size: "{{ item.size }}"
+             shrink: no
            loop:
              - { lv: tmp, size: 512m }
              - { lv: root, size: "100%FREE" }
+     - name: Setup LUKS encryption for root partition
+       block:
+         - name: Create and open LUKS volume
+           luks_device:
+             device: /dev/vgroup1/root
+             keyfile: /root/keyfile
+             name: root
+             state: opened
+         - name: Get UUID for root LUKS volume
+           command: /usr/bin/blkid --match-tag UUID --output value /dev/vgroup1/root
+           register: root_luks_uuid
+           changed_when: false
+     - name: Create filesystems
+       block:
+         - name: Create boot partition
+           filesystem:
+            dev: "{{ install_drive }}1"
+            fstype: vfat
+            opts: -F32
+         - name: Create root partition
+           filesystem:
+            dev: /dev/mapper/root
+            fstype: ext4
+         - name: Get UUID for boot filesystem
+           command: /usr/bin/blkid --match-tag UUID --output value {{ install_drive }}1
+           register: boot_uuid
+           changed_when: false
+         - name: Get UUID for root filesystem
+           command: /usr/bin/blkid --match-tag UUID --output value /dev/mapper/root
+           register: root_uuid
+           changed_when: false
+     - name: Mount filesystems
+       block:
+         - name: Mount root
+           mount:
+             src: UUID={{ root_uuid.stdout }}
+             path: /mnt
+             fstype: ext4
+             state: mounted
+         - name: Mount boot
+           mount:
+             src: UUID={{ boot_uuid.stdout }}
+             path: /mnt/boot
+             fstype: vfat
+             state: mounted
+     - name: Run pacstrap
+       command: pacstrap /mnt base dhclient dhcpcd efibootmgr grub linux lvm2
+     - name: fstab
+       block:
+         - name: Generate fstab
+           command: /usr/bin/genfstab -U /mnt >> /mnt/etc/fstab
+         - name: Add root volume to fstab
+           mount:
+             fstab: /mnt/etc/fstab
+             path: /
+             src: UUID={{ root_uuid.stdout }}
+             fstype: ext4
+             opts: defaults
+             passno: "1"
+             state: present
+         - name: Add boot volume to fstab
+           mount:
+             fstab: /mnt/etc/fstab
+             path: /boot
+             src: UUID={{ boot_uuid.stdout }}
+             fstype: vfat
+             opts: defaults
+             passno: "2"
+             state: present
+     - name: Set up initramfs
+       block:
+         - name: Add mkinitcpio.conf hooks
+           lineinfile:
+             dest: /mnt/etc/mkinitcpio.conf
+             regexp: ^HOOKS=
+             line: HOOKS=(base udev autodetect keyboard keymap modconf block encrypt lvm2 filesystems fsck)
+         - name: Create new initramfs
+           command: arch-chroot /mnt mkinitcpio --preset linux
+     - name: Set up grub
+       block:
+         - name: Add commandline information to grub config
+           lineinfile:
+             dest: /mnt/etc/default/grub
+             regexp: ^GRUB_CMDLINE_LINUX=
+             line: GRUB_CMDLINE_LINUX="cryptdevice=UUID={{ root_luks_uuid.stdout }}:root root=/dev/mapper/root"
+         - name: Install grub
+           command: arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+         - name: Create grub config
+           command: arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
+#     - name: Reboot
+#       reboot:
+#         connect_timeout: 1
+#         reboot_timeout: 1
+#       failed_when: false
+#
+
+# Create local account with access to wheel group
+# Shred /root/keyfile
