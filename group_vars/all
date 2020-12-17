@@ -1,0 +1,19 @@
+hostname: myhost
+
+user:
+    name: ksalman
+    uid: 1000
+    group: wheel
+    shell: /usr/bin/bash
+    home: /home/ksalman
+    
+base_packages:
+    - base-devel
+    - man-db
+    - man-pages
+    - sudo
+    - git
+    - pacman-contrib
+
+base_fonts:
+    - ttf-hack

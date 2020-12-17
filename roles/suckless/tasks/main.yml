@@ -1,0 +1,33 @@
+---
+# tasks file for roles/suckless
+- name: git clone suckless apps
+  git:
+    repo: "git://git.suckless.org/{{ item }}"
+    dest: "/{{ user.home }}/git/{{ item }}"
+    update: no
+    depth: 1
+  with_items:
+    - dwm
+    - st
+    - dmenu
+  become: yes
+  become_user: ksalman
+
+- name: build suckless apps
+  make:
+    chdir: "/{{ user.home }}/git/{{ item }}"
+  with_items:
+    - dwm
+    - st
+    - dmenu
+  become: yes
+  become_user: ksalman
+
+- name: Install suckless apps
+  make:
+    chdir: "/{{ user.home }}/git/{{ item }}"
+    target: install
+  with_items:
+    - dwm
+    - st
+    - dmenu

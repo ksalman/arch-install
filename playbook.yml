@@ -1,0 +1,6 @@
+- hosts: localhost
+  roles:
+    - { role: base, tags: ['base'] }
+    - { role: fonts, tags: ['fonts'] }
+    - { role: x, tags: ['x'] }
+    - { role: suckless, tags: ['suckless'] }

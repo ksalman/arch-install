@@ -21,6 +21,8 @@
              name: root
              flags: [lvm]
              state: present
+       tags:
+         - partition
      - name: Setup LVM
        block:
          - name: Configure volume group
@@ -37,6 +39,8 @@
            loop:
              - { lv: tmp, size: 512m }
              - { lv: root, size: "100%FREE" }
+       tags:
+         - lvm
      - name: Setup LUKS encryption for root partition
        block:
          - name: Create and open LUKS volume

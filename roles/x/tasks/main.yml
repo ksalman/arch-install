@@ -1,0 +1,14 @@
+---
+# tasks file for roles/x
+- name: Install Xinit
+  pacman: name=xorg-xinit state=present
+
+- name: dwm dependencies
+  pacman:
+    name:
+      - xorg-server
+      - xorg-xinit
+      - libx11
+      - libxft
+      - libxinerama
+      - webkit2gtk

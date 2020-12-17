@@ -1,0 +1,14 @@
+---
+# tasks file for roles/base
+- name: Install inetutils for hostname
+  pacman:
+      name: inetutils
+      state: present
+
+- name: Set hostname
+  hostname:
+    name: "{{ hostname }}"
+  when: hostname is defined
+
+- include: packages.yml
+- include: user.yml

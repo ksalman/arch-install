@@ -1,0 +1,6 @@
+---
+# tasks file for roles/fonts
+- name: Install base fonts
+  pacman:
+    name: "{{ base_fonts }}"
+    state: present

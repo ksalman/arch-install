@@ -1,0 +1,16 @@
+- name: Create user
+  user:
+    name: "{{ user.name }}"
+    group: "{{ user.group }}"
+    shell: "{{ user.shell }}"
+    uid: "{{ user.uid }}"
+  tags:
+    - user
+
+- name: Start user systemd instance
+  service:
+    name: "user@{{ user.uid }}"
+    state: started
+  notify: stop systemd per-user instance
+  tags:
+    - user
